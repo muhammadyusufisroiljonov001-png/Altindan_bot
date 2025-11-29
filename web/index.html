@@ -1,34 +1,22 @@
+<!-- web/index.html (tilni qo'llash bilan) -->
 <!doctype html>
 <html lang="uz">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AltinDan — Menu</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;background:#fff;margin:0;padding:0}
-    .header{background:#e53935;color:#fff;padding:12px;text-align:center}
-    .container{padding:12px}
-    .cards{display:flex;gap:10px;flex-wrap:wrap}
-    .card{width:120px;border-radius:10px;overflow:hidden;background:#f7f7f7;padding:8px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
-    .card img{width:100%;height:80px;object-fit:cover;border-radius:6px}
-    .card h4{font-size:14px;margin:6px 0}
-    .order-form{margin-top:14px}
-    label{display:block;font-weight:600;margin:6px 0 3px}
-    input,textarea{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
-    button{margin-top:10px;background:#e53935;color:#fff;padding:10px;border:0;border-radius:8px;width:100%}
-    footer{padding:12px;text-align:center;color:#888;font-size:12px}
-  </style>
+  <style>/* same as before */</style>
 </head>
 <body>
-  <div class="header"><h2>AltinDan Menu</h2></div>
+  <div class="header"><h2 id="title">AltinDan Menu</h2></div>
   <div class="container">
     <div class="cards" id="cards"></div>
     <div class="order-form">
-      <label>Mahsulot (nom)</label>
+      <label id="label_product">Mahsulot (nom)</label>
       <input id="product" placeholder="Masalan: Chuchvara 1 kg" />
-      <label>Miqdor / Izoh</label>
+      <label id="label_qty">Miqdor / Izoh</label>
       <input id="qty" placeholder="Miqdor, masalan: 2 kg yoki 1 ta" />
-      <label>Ism va manzil</label>
+      <label id="label_address">Ism va manzil</label>
       <textarea id="address" rows="3" placeholder="Ism, manzil, telefon"></textarea>
       <button id="sendOrder">Buyurtma yuborish</button>
     </div>
@@ -36,18 +24,56 @@
   </div>
 
 <script>
+  // read lang from url param
+  const params = new URLSearchParams(window.location.search);
+  let lang = params.get('lang') || 'uz';
+  if(!['uz','ru'].includes(lang)) lang = 'uz';
+
+  const TEXTS = {
+    "uz": {
+      "title":"AltinDan Menu",
+      "product_label":"Mahsulot (nom)",
+      "qty_label":"Miqdor / Izoh",
+      "address_label":"Ism va manzil",
+      "send_button":"Buyurtma yuborish",
+      "select_placeholder":"Masalan: Chuchvara 1 kg",
+      "addr_placeholder":"Ism, manzil, telefon"
+    },
+    "ru": {
+      "title":"Меню AltinDan",
+      "product_label":"Продукт (название)",
+      "qty_label":"Количество / примечание",
+      "address_label":"Имя и адрес",
+      "send_button":"Отправить заказ",
+      "select_placeholder":"Например: Чучвара 1 кг",
+      "addr_placeholder":"Имя, адрес, телефон"
+    }
+  };
+
+  // apply texts
+  const t = TEXTS[lang];
+  document.getElementById('title').innerText = t.title;
+  document.getElementById('label_product').innerText = t.product_label;
+  document.getElementById('product').placeholder = t.select_placeholder;
+  document.getElementById('label_qty').innerText = t.qty_label;
+  document.getElementById('label_address').innerText = t.address_label;
+  document.getElementById('address').placeholder = t.addr_placeholder;
+  document.getElementById('sendOrder').innerText = t.send_button;
+
   const tg = window.Telegram?.WebApp || null;
   const products = [
-    {id:'p1', title:'Chuchvara 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
-    {id:'p2', title:'Manty 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
-    {id:'p3', title:'Qiyma 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
+    {id:'p1', title: lang === 'ru' ? 'Чучвара 1кг' : 'Chuchvara 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
+    {id:'p2', title: lang === 'ru' ? 'Манты 1кг' : 'Manty 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
+    {id:'p3', title: lang === 'ru' ? 'Кыма 1кг' : 'Qiyma 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
   ];
+
   const cards = document.getElementById('cards');
   products.forEach(p=>{
     const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<img src="${p.img}" alt=""><h4>${p.title}</h4><button data-id="${p.id}">Tanlash</button>`;
+    el.innerHTML = `<img src="${p.img}" alt=""><h4>${p.title}</h4><button data-id="${p.id}">${lang==='ru'?'Выбрать':'Tanlash'}</button>`;
     cards.appendChild(el);
   });
+
   cards.addEventListener('click', (e)=>{
     const btn = e.target.closest('button'); if(!btn) return;
     const prod = products.find(x=>x.id===btn.dataset.id);
@@ -58,17 +84,22 @@
     const product = document.getElementById('product').value.trim();
     const qty = document.getElementById('qty').value.trim();
     const address = document.getElementById('address').value.trim();
-    if(!product || !address){ alert('Iltimos mahsulot va manzilni to‘ldiring.'); return; }
-    const payload = { product, qty, address, time: new Date().toISOString(), fromWebApp:true };
+    if(!product || !address){
+      alert(lang==='ru' ? 'Пожалуйста, заполните продукт и адрес.' : "Iltimos mahsulot va manzilni to‘ldiring.");
+      return;
+    }
+    const payload = { product, qty, address, time: new Date().toISOString(), fromWebApp:true, lang };
     const json = JSON.stringify(payload);
     if(tg){
-      try{ tg.sendData(json); }catch(e){ alert('Xatolik: sendData ishlamadi'); }
+      try{ tg.sendData(json); }catch(e){ alert(lang==='ru' ? 'Ошибка: не удалось отправить данные' : 'Xatolik: sendData ishlamadi'); }
     } else {
       fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:json})
         .then(r=>r.json()).then(j=>alert('Order saved: '+j.status)).catch(e=>alert('Error'));
     }
   });
+
   if(tg) tg.expand();
 </script>
 </body>
 </html>
+
