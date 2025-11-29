@@ -25,14 +25,14 @@ WEBAPP_URL = os.environ.get("WEBAPP_URL")  # e.g. https://your-app.up.railway.ap
 # translations
 TRANSLATIONS = {
     "uz": {
-        "start": "Salom! /menu orqali menyuni oching.",
+        "start": "Xush kelibsiz",
         "menu_text": "Menyu:",
         "group_saved": "Guruh saqlandi.",
         "order_received_user": "✅ Buyurtmangiz qabul qilindi! Tez orada guruhga yuboriladi.",
         "webapp_not_config": "WEBAPP_URL sozlanmagan."
     },
     "ru": {
-        "start": "Привет! Открой меню через /menu.",
+        "start": "Добро пожоловать.",
         "menu_text": "Меню:",
         "group_saved": "Группа сохранена.",
         "order_received_user": "✅ Ваш заказ принят! Скоро отправим в группу.",
@@ -167,3 +167,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
