@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AltinDan — Menu</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#fff;margin:0;padding:0}
+    .header{background:#e53935;color:#fff;padding:12px;text-align:center}
+    .container{padding:12px}
+    .cards{display:flex;gap:10px;flex-wrap:wrap}
+    .card{width:120px;border-radius:10px;overflow:hidden;background:#f7f7f7;padding:8px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+    .card img{width:100%;height:80px;object-fit:cover;border-radius:6px}
+    .card h4{font-size:14px;margin:6px 0}
+    .order-form{margin-top:14px}
+    label{display:block;font-weight:600;margin:6px 0 3px}
+    input,textarea{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
+    button{margin-top:10px;background:#e53935;color:#fff;padding:10px;border:0;border-radius:8px;width:100%}
+    footer{padding:12px;text-align:center;color:#888;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="header"><h2>AltinDan Menu</h2></div>
+  <div class="container">
+    <div class="cards" id="cards"></div>
+    <div class="order-form">
+      <label>Mahsulot (nom)</label>
+      <input id="product" placeholder="Masalan: Chuchvara 1 kg" />
+      <label>Miqdor / Izoh</label>
+      <input id="qty" placeholder="Miqdor, masalan: 2 kg yoki 1 ta" />
+      <label>Ism va manzil</label>
+      <textarea id="address" rows="3" placeholder="Ism, manzil, telefon"></textarea>
+      <button id="sendOrder">Buyurtma yuborish</button>
+    </div>
+    <footer>© AltinDan</footer>
+  </div>
+
+<script>
+  const tg = window.Telegram?.WebApp || null;
+  const products = [
+    {id:'p1', title:'Chuchvara 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
+    {id:'p2', title:'Manty 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
+    {id:'p3', title:'Qiyma 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
+  ];
+  const cards = document.getElementById('cards');
+  products.forEach(p=>{
+    const el = document.createElement('div'); el.className='card';
+    el.innerHTML = `<img src="${p.img}" alt=""><h4>${p.title}</h4><button data-id="${p.id}">Tanlash</button>`;
+    cards.appendChild(el);
+  });
+  cards.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    const prod = products.find(x=>x.id===btn.dataset.id);
+    if(prod) document.getElementById('product').value = prod.title;
+  });
+
+  document.getElementById('sendOrder').addEventListener('click', ()=>{
+    const product = document.getElementById('product').value.trim();
+    const qty = document.getElementById('qty').value.trim();
+    const address = document.getElementById('address').value.trim();
+    if(!product || !address){ alert('Iltimos mahsulot va manzilni to‘ldiring.'); return; }
+    const payload = { product, qty, address, time: new Date().toISOString(), fromWebApp:true };
+    const json = JSON.stringify(payload);
+    if(tg){
+      try{ tg.sendData(json); }catch(e){ alert('Xatolik: sendData ishlamadi'); }
+    } else {
+      fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:json})
+        .then(r=>r.json()).then(j=>alert('Order saved: '+j.status)).catch(e=>alert('Error'));
+    }
+  });
+  if(tg) tg.expand();
+</script>
+</body>
+</html>
