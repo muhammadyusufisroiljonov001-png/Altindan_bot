@@ -21,9 +21,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if WEBAPP_URL:
         kb.append([ InlineKeyboardButton("📦 Открыть", web_app=WebAppInfo(url=WEBAPP_URL)) ])
     else:
-        kb.append([ InlineKeyboardButton("📦 Открыть ", callback_data="no_webapp") ])
+        kb.append([ InlineKeyboardButton("  Открыть ", callback_data="no_webapp") ])
     kb.append([ InlineKeyboardButton("✍️ Оставить отзыв", callback_data="feedback") ])
-    await update.message.reply_text("Добро пожаловать.", reply_markup=InlineKeyboardMarkup(kb))
+    await update.message.reply_text("Добро пожаловать", reply_markup=InlineKeyboardMarkup(kb))
 
 async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await start(update, context)
@@ -59,5 +59,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
