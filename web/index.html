@@ -1,105 +1,70 @@
-<!-- web/index.html (tilni qo'llash bilan) -->
 <!doctype html>
-<html lang="uz">
+<html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AltinDan — Menu</title>
-  <style>/* same as before */</style>
+  <title>Altindan Menu</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 12px; background:#fff; color:#111 }
+    .card { border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:8px; display:flex; gap:12px; align-items:center }
+    img { width:80px; height:80px; object-fit:cover; border-radius:6px }
+    button { padding:8px 12px; border-radius:6px; border:none; background:#2b8cff; color:white; cursor:pointer }
+  </style>
 </head>
 <body>
-  <div class="header"><h2 id="title">AltinDan Menu</h2></div>
-  <div class="container">
-    <div class="cards" id="cards"></div>
-    <div class="order-form">
-      <label id="label_product">Mahsulot (nom)</label>
-      <input id="product" placeholder="Masalan: Chuchvara 1 kg" />
-      <label id="label_qty">Miqdor / Izoh</label>
-      <input id="qty" placeholder="Miqdor, masalan: 2 kg yoki 1 ta" />
-      <label id="label_address">Ism va manzil</label>
-      <textarea id="address" rows="3" placeholder="Ism, manzil, telefon"></textarea>
-      <button id="sendOrder">Buyurtma yuborish</button>
-    </div>
-    <footer>© AltinDan</footer>
-  </div>
+  <h2>Menu</h2>
+  <div id="products">Loading...</div>
 
 <script>
-  // read lang from url param
-  const params = new URLSearchParams(window.location.search);
-  let lang = params.get('lang') || 'uz';
-  if(!['uz','ru'].includes(lang)) lang = 'uz';
+async function loadProducts(){
+  const res = await fetch('/api/products');
+  const data = await res.json();
+  const container = document.getElementById('products');
+  container.innerHTML = '';
+  data.forEach(p=>{
+    const title = (navigator.language && navigator.language.startsWith('ru')) ? p.title_ru : p.title_uz;
+    const imgPath = p.img && p.img.startsWith('/') ? (location.origin + p.img) : p.img;
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `<img src="${imgPath}" alt=""><div style="flex:1"><h3 style="margin:0">${title}</h3><div style="color:#666">${p.price}</div></div>
+      <div><button onclick='buy("${p.id}")'>Buy</button></div>`;
+    container.appendChild(el);
+  });
+}
 
-  const TEXTS = {
-    "uz": {
-      "title":"AltinDan Menu",
-      "product_label":"Mahsulot (nom)",
-      "qty_label":"Miqdor / Izoh",
-      "address_label":"Ism va manzil",
-      "send_button":"Buyurtma yuborish",
-      "select_placeholder":"Masalan: Chuchvara 1 kg",
-      "addr_placeholder":"Ism, manzil, telefon"
-    },
-    "ru": {
-      "title":"Меню AltinDan",
-      "product_label":"Продукт (название)",
-      "qty_label":"Количество / примечание",
-      "address_label":"Имя и адрес",
-      "send_button":"Отправить заказ",
-      "select_placeholder":"Например: Чучвара 1 кг",
-      "addr_placeholder":"Имя, адрес, телефон"
-    }
+let selectedProduct=null;
+async function buy(productId){
+  const resP = await fetch('/api/products');
+  const products = await resP.json();
+  selectedProduct = products.find(x=>x.id===productId);
+  const address = prompt("Manzilni kiriting:");
+  if(!address) return alert("Manzil kiritilmadi");
+  const payload = {
+    productId: selectedProduct.id,
+    title_uz: selectedProduct.title_uz,
+    title_ru: selectedProduct.title_ru,
+    price: selectedProduct.price,
+    img: selectedProduct.img && (selectedProduct.img.startsWith('/') ? location.origin + selectedProduct.img : selectedProduct.img),
+    address,
+    qty: 1,
+    time: new Date().toISOString()
   };
-
-  // apply texts
-  const t = TEXTS[lang];
-  document.getElementById('title').innerText = t.title;
-  document.getElementById('label_product').innerText = t.product_label;
-  document.getElementById('product').placeholder = t.select_placeholder;
-  document.getElementById('label_qty').innerText = t.qty_label;
-  document.getElementById('label_address').innerText = t.address_label;
-  document.getElementById('address').placeholder = t.addr_placeholder;
-  document.getElementById('sendOrder').innerText = t.send_button;
-
-  const tg = window.Telegram?.WebApp || null;
-  const products = [
-    {id:'p1', title: lang === 'ru' ? 'Чучвара 1кг' : 'Chuchvara 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
-    {id:'p2', title: lang === 'ru' ? 'Манты 1кг' : 'Manty 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
-    {id:'p3', title: lang === 'ru' ? 'Кыма 1кг' : 'Qiyma 1kg', img:'https://i.imgur.com/3QmJ2.jpg'},
-  ];
-
-  const cards = document.getElementById('cards');
-  products.forEach(p=>{
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<img src="${p.img}" alt=""><h4>${p.title}</h4><button data-id="${p.id}">${lang==='ru'?'Выбрать':'Tanlash'}</button>`;
-    cards.appendChild(el);
+  const resp = await fetch('/api/order', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
   });
+  if(resp.ok){
+    alert('Buyurtma yuborildi ✅');
+    // agar Telegram WebApp orqali ochilgan bo'lsa - yopish:
+    try { if(window.Telegram && window.Telegram.WebApp) Telegram.WebApp.close(); } catch(e){}
+  } else {
+    const txt = await resp.text();
+    alert('Xatolik: '+txt);
+  }
+}
 
-  cards.addEventListener('click', (e)=>{
-    const btn = e.target.closest('button'); if(!btn) return;
-    const prod = products.find(x=>x.id===btn.dataset.id);
-    if(prod) document.getElementById('product').value = prod.title;
-  });
-
-  document.getElementById('sendOrder').addEventListener('click', ()=>{
-    const product = document.getElementById('product').value.trim();
-    const qty = document.getElementById('qty').value.trim();
-    const address = document.getElementById('address').value.trim();
-    if(!product || !address){
-      alert(lang==='ru' ? 'Пожалуйста, заполните продукт и адрес.' : "Iltimos mahsulot va manzilni to‘ldiring.");
-      return;
-    }
-    const payload = { product, qty, address, time: new Date().toISOString(), fromWebApp:true, lang };
-    const json = JSON.stringify(payload);
-    if(tg){
-      try{ tg.sendData(json); }catch(e){ alert(lang==='ru' ? 'Ошибка: не удалось отправить данные' : 'Xatolik: sendData ishlamadi'); }
-    } else {
-      fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:json})
-        .then(r=>r.json()).then(j=>alert('Order saved: '+j.status)).catch(e=>alert('Error'));
-    }
-  });
-
-  if(tg) tg.expand();
+loadProducts();
 </script>
 </body>
 </html>
-
