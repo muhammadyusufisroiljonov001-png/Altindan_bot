@@ -1,8 +1,11 @@
 # main.py
 """
-Premium Mini-App (JSON DB) — Flask + aiogram (v3)
-Supports: Uzbek + Russian (lang via ?lang=uz or ?lang=ru)
+Mini web + Telegram bot (Flask + aiogram v3)
+Simple JSON DB, templates, images folder.
 """
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import os
 import json
@@ -55,10 +58,6 @@ except Exception:
 WEB_URL = os.environ.get("WEB_URL") or ""
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me")
 
-# Flask app
-app = Flask(__name__, template_folder=str(TEMPLATES), static_folder=str(STATIC))
-app.secret_key = SECRET_KEY
-
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"}
 
 # --- Database helpers (simple JSON) ---
@@ -107,7 +106,7 @@ def generate_id(prefix="p"):
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
 
-# Create placeholder images
+# Create placeholder images if missing
 def ensure_sample_images():
     db = read_db()
     for p in db.get("products", []):
@@ -116,14 +115,16 @@ def ensure_sample_images():
             path = IMAGES / img
             if not path.exists():
                 try:
-                    # safe filename path (create directories if nested)
                     path.parent.mkdir(parents=True, exist_ok=True)
                     urlretrieve(f"https://via.placeholder.com/800x400?text={p.get('id')}", str(path))
                 except Exception:
                     path.write_text("", encoding="utf-8")
 ensure_sample_images()
 
-# --- User routes ---
+# --- Flask app and routes ---
+app = Flask(__name__, template_folder=str(TEMPLATES), static_folder=str(STATIC))
+app.secret_key = SECRET_KEY
+
 @app.route("/")
 def index():
     lang = request.args.get("lang", "ru")
@@ -177,7 +178,6 @@ def order(product_id):
 
     return render_template("order.html", product=product, lang=lang)
 
-# --- Static ---
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory(str(STATIC), filename)
@@ -216,7 +216,7 @@ def admin_panel():
     db = read_db()
     return render_template("admin.html", products=db["products"], orders=db["orders"], lang=lang)
 
-# --- API ---
+# --- API endpoints ---
 @app.route("/api/products", methods=["GET", "POST"])
 def api_products():
     if request.method == "GET":
@@ -243,7 +243,6 @@ def api_products():
     write_db(db)
     return jsonify(product), 201
 
-# upload
 @app.route("/api/upload", methods=["POST"])
 def api_upload():
     if not session.get("admin"):
@@ -266,13 +265,12 @@ def api_upload():
         "url": f"images/{filename}"
     }), 201
 
-# --- Telegram ---
+# --- Telegram setup ---
 bot = None
 dp = None
 if BOT_TOKEN and Bot:
     try:
         bot = Bot(token=BOT_TOKEN)
-        # give memory storage to dispatcher for aiogram v3
         storage = MemoryStorage() if MemoryStorage else None
         dp = Dispatcher(storage=storage)
     except Exception as e:
@@ -314,7 +312,7 @@ if dp and types:
         markup = types.InlineKeyboardMarkup(inline_keyboard=kb)
         await m.answer("Добро пожаловать", reply_markup=markup)
 
-# --- Run ---
+# --- Run server + bot ---
 def run_flask():
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, threaded=True)
@@ -335,12 +333,10 @@ def run_bot_loop():
         print("Polling stopped:", e)
 
 if __name__ == "__main__":
-    # Start Flask in a thread, then start bot loop in main thread so container stays alive
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     print("Flask started.")
 
-    # If bot isn't configured, keep process alive (web-only)
     if not bot or not dp:
         print("Web only mode (Telegram disabled).")
         try:
@@ -349,5 +345,4 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("Shutting down.")
     else:
-        # run bot polling (blocking)
         run_bot_loop()
