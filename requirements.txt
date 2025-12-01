@@ -1,7 +1,7 @@
 Flask>=2.0
-aiogram>=3.0.0b7
-aiohttp
-python-dotenv
-gunicorn
-
+aiogram==3.4.1
+aiohttp>=3.8
+python-dotenv>=1.0
+gunicorn>=21.2
+Werkzeug>=2.0
 
