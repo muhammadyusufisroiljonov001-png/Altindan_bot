@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Admin</title></head>
+<body>
+  <h1>Admin panel</h1>
+
+  <h2>Products</h2>
+  <ul>
+  {% for p in products %}
+    <li>{{ p.id }} - {{ p.name_ru }}</li>
+  {% endfor %}
+  </ul>
+
+  <h2>Orders</h2>
+  <ul>
+  {% for o in orders %}
+    <li>{{ o.id }} — {{ o.product_name }} — {{ o.name }}</li>
+  {% endfor %}
+  </ul>
+
+  <a href="{{ url_for('admin_logout') }}">Logout</a>
+</body>
+</html>
